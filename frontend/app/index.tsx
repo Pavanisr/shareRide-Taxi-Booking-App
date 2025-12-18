@@ -1,12 +1,15 @@
 import { View, Text, StyleSheet, Image, StatusBar, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef } from "react";
+import { useRouter } from "expo-router";
 
 export default function Index() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const router = useRouter();
 
   useEffect(() => {
+    // Splash animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -19,6 +22,13 @@ export default function Index() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Auto navigate after 5 seconds
+    const timer = setTimeout(() => {
+      router.replace("/start"); // start.tsx
+    }, 5000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
