@@ -70,9 +70,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ------------------- AUTHENTICATED ROUTES -------------------
-
-// Create Ride
+// ------------------- CREATE RIDE -------------------
 router.post("/create-ride", authenticateToken, async (req, res) => {
   try {
     const { pickup_city, destination_city, seats, date_time } = req.body;
@@ -91,14 +89,18 @@ router.post("/create-ride", authenticateToken, async (req, res) => {
   }
 });
 
-// Get rides by city
+// ------------------- GET AVAILABLE RIDES -------------------
 router.get("/rides", authenticateToken, async (req, res) => {
   try {
     const { pickup, destination } = req.query;
+
+    // Only rides with seats > 0 and status AVAILABLE
     const rides = await pool.query(
-      `SELECT * FROM rides WHERE pickup_city=$1 AND destination_city=$2 AND status='AVAILABLE'`,
+      `SELECT * FROM rides 
+       WHERE pickup_city=$1 AND destination_city=$2 AND status='AVAILABLE' AND seats > 0`,
       [pickup, destination]
     );
+
     res.json(rides.rows);
   } catch (err) {
     console.error(err);
@@ -106,11 +108,33 @@ router.get("/rides", authenticateToken, async (req, res) => {
   }
 });
 
-// Join Ride
+// ------------------- GET RIDES ACCEPTED BY DRIVERS -------------------
+router.get("/accepted-rides", authenticateToken, async (req, res) => {
+  try {
+    const rides = await pool.query(
+      `SELECT r.*, u.name as driver_name, u.vehicle_type, u.vehicle_number, u.vehicle_image
+       FROM rides r
+       JOIN users u ON r.driver_id = u.id
+       WHERE r.driver_id IS NOT NULL`
+    );
+
+    res.json(rides.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch accepted rides" });
+  }
+});
+
+// ------------------- JOIN RIDE -------------------
 router.post("/join-ride", authenticateToken, async (req, res) => {
   try {
     const { ride_id } = req.body;
     const passenger_id = req.user.id;
+
+    // Check if seats are available
+    const ride = await pool.query("SELECT seats FROM rides WHERE id=$1", [ride_id]);
+    if (ride.rows.length === 0) return res.status(404).json({ message: "Ride not found" });
+    if (ride.rows[0].seats <= 0) return res.status(400).json({ message: "No seats available" });
 
     await pool.query(
       "INSERT INTO ride_members (ride_id,passenger_id) VALUES ($1,$2)",
@@ -125,7 +149,7 @@ router.post("/join-ride", authenticateToken, async (req, res) => {
   }
 });
 
-// Rate Driver
+// ------------------- RATE DRIVER -------------------
 router.post("/rate-driver", authenticateToken, async (req, res) => {
   try {
     const { driver_id, ride_id, rating, review } = req.body;
@@ -136,6 +160,7 @@ router.post("/rate-driver", authenticateToken, async (req, res) => {
        VALUES ($1,$2,$3,$4,$5)`,
       [driver_id, passenger_id, ride_id, rating, review]
     );
+
     res.json({ message: "Review submitted" });
   } catch (err) {
     console.error(err);
@@ -143,7 +168,7 @@ router.post("/rate-driver", authenticateToken, async (req, res) => {
   }
 });
 
-// Update Profile Image
+// ------------------- UPDATE PROFILE IMAGE -------------------
 router.put("/update-profile-image", authenticateToken, upload.single("profile_image"), async (req, res) => {
   try {
     const passenger_id = req.user.id;
