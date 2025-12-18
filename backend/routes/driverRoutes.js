@@ -6,24 +6,36 @@ const jwt = require("jsonwebtoken");
 const pool = require("../db");
 const multer = require("multer");
 const path = require("path");
+const authenticateToken = require("../auth"); // JWT auth middleware
 
 const router = express.Router();
 
 // ------------------- MULTER SETUP -------------------
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/"); // save all images in uploads folder
-  },
-  filename: function (req, file, cb) {
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
 
-// Upload handler for multiple images
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-// ------------------- REGISTER WITH PROFILE & VEHICLE IMAGE -------------------
+// ------------------- DRIVER ROLE CHECK MIDDLEWARE -------------------
+const authorizeDriver = async (req, res, next) => {
+  try {
+    const user = await pool.query("SELECT role FROM users WHERE id=$1", [req.user.id]);
+    if (!user.rows.length || user.rows[0].role !== "driver") {
+      return res.status(403).json({ message: "Access denied. Only drivers allowed." });
+    }
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Authorization failed" });
+  }
+};
+
+// ------------------- REGISTER DRIVER -------------------
 router.post(
   "/register",
   upload.fields([
@@ -35,12 +47,8 @@ router.post(
       const { name, email, password, city_code, vehicle_type, vehicle_number } = req.body;
       const hash = await bcrypt.hash(password, 10);
 
-      const profileImage = req.files["profile_image"]
-        ? req.files["profile_image"][0].filename
-        : null;
-      const vehicleImage = req.files["vehicle_image"]
-        ? req.files["vehicle_image"][0].filename
-        : null;
+      const profileImage = req.files["profile_image"] ? req.files["profile_image"][0].filename : null;
+      const vehicleImage = req.files["vehicle_image"] ? req.files["vehicle_image"][0].filename : null;
 
       await pool.query(
         `INSERT INTO users 
@@ -57,25 +65,18 @@ router.post(
   }
 );
 
-// ------------------- LOGIN -------------------
+// ------------------- LOGIN DRIVER -------------------
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await pool.query(
-      "SELECT * FROM users WHERE email=$1 AND role='driver'",
-      [email]
-    );
-
-    if (user.rows.length === 0)
-      return res.status(401).json({ message: "Invalid credentials" });
+    const user = await pool.query("SELECT * FROM users WHERE email=$1 AND role='driver'", [email]);
+    if (user.rows.length === 0) return res.status(401).json({ message: "Invalid credentials" });
 
     const match = await bcrypt.compare(password, user.rows[0].password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user.rows[0].id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign({ id: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.json({
       token,
@@ -97,13 +98,13 @@ router.post("/login", async (req, res) => {
 });
 
 // ------------------- GET AVAILABLE RIDES -------------------
-router.get("/available-rides/:city", async (req, res) => {
+router.get("/available-rides", authenticateToken, authorizeDriver, async (req, res) => {
   try {
-    const city = req.params.city;
+    const user = await pool.query("SELECT city_code FROM users WHERE id=$1", [req.user.id]);
+    const city = user.rows[0].city_code;
 
     const rides = await pool.query(
-      `SELECT * FROM rides 
-       WHERE pickup_city=$1 AND driver_id IS NULL AND status='AVAILABLE'`,
+      "SELECT * FROM rides WHERE pickup_city=$1 AND driver_id IS NULL AND status='AVAILABLE'",
       [city]
     );
 
@@ -115,14 +116,12 @@ router.get("/available-rides/:city", async (req, res) => {
 });
 
 // ------------------- ACCEPT RIDE -------------------
-router.post("/accept-ride", async (req, res) => {
+router.post("/accept-ride", authenticateToken, authorizeDriver, async (req, res) => {
   try {
-    const { ride_id, driver_id } = req.body;
+    const driver_id = req.user.id;
+    const { ride_id } = req.body;
 
-    await pool.query(
-      "UPDATE rides SET driver_id=$1, status='ACCEPTED' WHERE id=$2",
-      [driver_id, ride_id]
-    );
+    await pool.query("UPDATE rides SET driver_id=$1, status='ACCEPTED' WHERE id=$2", [driver_id, ride_id]);
 
     res.json({ message: "Ride accepted" });
   } catch (err) {
@@ -132,14 +131,11 @@ router.post("/accept-ride", async (req, res) => {
 });
 
 // ------------------- UPDATE RIDE STATUS -------------------
-router.post("/ride-status", async (req, res) => {
+router.post("/ride-status", authenticateToken, authorizeDriver, async (req, res) => {
   try {
     const { ride_id, status } = req.body;
 
-    await pool.query(
-      "UPDATE rides SET status=$1 WHERE id=$2",
-      [status, ride_id]
-    );
+    await pool.query("UPDATE rides SET status=$1 WHERE id=$2", [status, ride_id]);
 
     res.json({ message: "Ride status updated" });
   } catch (err) {
@@ -148,13 +144,11 @@ router.post("/ride-status", async (req, res) => {
   }
 });
 
-// ------------------- GET OWN REVIEWS -------------------
-router.get("/reviews/:driverId", async (req, res) => {
+// ------------------- GET DRIVER REVIEWS -------------------
+router.get("/reviews", authenticateToken, authorizeDriver, async (req, res) => {
   try {
-    const reviews = await pool.query(
-      "SELECT * FROM reviews WHERE driver_id=$1",
-      [req.params.driverId]
-    );
+    const driver_id = req.user.id;
+    const reviews = await pool.query("SELECT * FROM reviews WHERE driver_id=$1", [driver_id]);
 
     res.json(reviews.rows);
   } catch (err) {
@@ -164,53 +158,37 @@ router.get("/reviews/:driverId", async (req, res) => {
 });
 
 // ------------------- UPDATE PROFILE IMAGE -------------------
-router.put(
-  "/update-profile-image/:id",
-  upload.single("profile_image"),
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-      const profileImage = req.file ? req.file.filename : null;
+router.put("/update-profile-image", authenticateToken, authorizeDriver, upload.single("profile_image"), async (req, res) => {
+  try {
+    const driver_id = req.user.id;
+    const profileImage = req.file ? req.file.filename : null;
 
-      if (!profileImage)
-        return res.status(400).json({ message: "No image uploaded" });
+    if (!profileImage) return res.status(400).json({ message: "No image uploaded" });
 
-      await pool.query(
-        "UPDATE users SET profile_image=$1 WHERE id=$2",
-        [profileImage, id]
-      );
+    await pool.query("UPDATE users SET profile_image=$1 WHERE id=$2", [profileImage, driver_id]);
 
-      res.json({ message: "Profile image updated", profileImage });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to update profile image" });
-    }
+    res.json({ message: "Profile image updated", profileImage });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update profile image" });
   }
-);
+});
 
 // ------------------- UPDATE VEHICLE IMAGE -------------------
-router.put(
-  "/update-vehicle-image/:id",
-  upload.single("vehicle_image"),
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-      const vehicleImage = req.file ? req.file.filename : null;
+router.put("/update-vehicle-image", authenticateToken, authorizeDriver, upload.single("vehicle_image"), async (req, res) => {
+  try {
+    const driver_id = req.user.id;
+    const vehicleImage = req.file ? req.file.filename : null;
 
-      if (!vehicleImage)
-        return res.status(400).json({ message: "No image uploaded" });
+    if (!vehicleImage) return res.status(400).json({ message: "No image uploaded" });
 
-      await pool.query(
-        "UPDATE users SET vehicle_image=$1 WHERE id=$2",
-        [vehicleImage, id]
-      );
+    await pool.query("UPDATE users SET vehicle_image=$1 WHERE id=$2", [vehicleImage, driver_id]);
 
-      res.json({ message: "Vehicle image updated", vehicleImage });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to update vehicle image" });
-    }
+    res.json({ message: "Vehicle image updated", vehicleImage });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update vehicle image" });
   }
-);
+});
 
 module.exports = router;
