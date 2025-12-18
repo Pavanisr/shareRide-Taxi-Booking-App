@@ -1,3 +1,5 @@
+// routes/passengerRoutes.js
+
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -70,6 +72,55 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// ------------------- LOGOUT -------------------
+router.post("/logout", authenticateToken, async (req, res) => {
+  // JWT is stateless; frontend should delete token
+  res.json({ message: "Logged out successfully" });
+});
+
+// ------------------- EDIT PROFILE -------------------
+router.put("/edit-profile", authenticateToken, upload.single("profile_image"), async (req, res) => {
+  try {
+    const passenger_id = req.user.id;
+    const { name, city_code } = req.body;
+    const profileImage = req.file ? req.file.filename : null;
+
+    const query = [];
+    const values = [];
+
+    if (name) { query.push("name=$" + (values.length + 1)); values.push(name); }
+    if (city_code) { query.push("city_code=$" + (values.length + 1)); values.push(city_code); }
+    if (profileImage) { query.push("profile_image=$" + (values.length + 1)); values.push(profileImage); }
+
+    if (query.length === 0) return res.status(400).json({ message: "Nothing to update" });
+
+    values.push(passenger_id);
+    await pool.query(`UPDATE users SET ${query.join(", ")} WHERE id=$${values.length}`, values);
+
+    res.json({ message: "Profile updated", profileImage });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+
+// ------------------- DELETE PROFILE -------------------
+router.delete("/delete-profile", authenticateToken, async (req, res) => {
+  try {
+    const passenger_id = req.user.id;
+
+    await pool.query("DELETE FROM ride_members WHERE passenger_id=$1", [passenger_id]);
+    await pool.query("DELETE FROM rides WHERE passenger_id=$1", [passenger_id]);
+    await pool.query("DELETE FROM reviews WHERE passenger_id=$1", [passenger_id]);
+    await pool.query("DELETE FROM users WHERE id=$1", [passenger_id]);
+
+    res.json({ message: "Profile deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete profile" });
+  }
+});
+
 // ------------------- CREATE RIDE -------------------
 router.post("/create-ride", authenticateToken, async (req, res) => {
   try {
@@ -89,15 +140,32 @@ router.post("/create-ride", authenticateToken, async (req, res) => {
   }
 });
 
+// ------------------- DELETE OWN RIDE -------------------
+router.delete("/delete-ride/:ride_id", authenticateToken, async (req, res) => {
+  try {
+    const passenger_id = req.user.id;
+    const { ride_id } = req.params;
+
+    const ride = await pool.query("SELECT * FROM rides WHERE id=$1 AND passenger_id=$2", [ride_id, passenger_id]);
+    if (ride.rows.length === 0) return res.status(404).json({ message: "Ride not found" });
+
+    await pool.query("DELETE FROM ride_members WHERE ride_id=$1", [ride_id]);
+    await pool.query("DELETE FROM rides WHERE id=$1", [ride_id]);
+
+    res.json({ message: "Ride deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete ride" });
+  }
+});
+
 // ------------------- GET AVAILABLE RIDES -------------------
 router.get("/rides", authenticateToken, async (req, res) => {
   try {
     const { pickup, destination } = req.query;
 
-    // Only rides with seats > 0 and status AVAILABLE
     const rides = await pool.query(
-      `SELECT * FROM rides 
-       WHERE pickup_city=$1 AND destination_city=$2 AND status='AVAILABLE' AND seats > 0`,
+      `SELECT * FROM rides WHERE pickup_city=$1 AND destination_city=$2 AND status='AVAILABLE' AND seats > 0`,
       [pickup, destination]
     );
 
@@ -108,14 +176,20 @@ router.get("/rides", authenticateToken, async (req, res) => {
   }
 });
 
-// ------------------- GET RIDES ACCEPTED BY DRIVERS -------------------
+// ------------------- GET ACCEPTED RIDES -------------------
 router.get("/accepted-rides", authenticateToken, async (req, res) => {
   try {
+    const { pickup, destination } = req.query;
+
     const rides = await pool.query(
       `SELECT r.*, u.name as driver_name, u.vehicle_type, u.vehicle_number, u.vehicle_image
        FROM rides r
        JOIN users u ON r.driver_id = u.id
-       WHERE r.driver_id IS NOT NULL`
+       WHERE r.driver_id IS NOT NULL
+       AND r.status != 'STARTED'
+       AND r.seats > 0
+       AND r.pickup_city=$1 AND r.destination_city=$2`,
+      [pickup, destination]
     );
 
     res.json(rides.rows);
@@ -131,21 +205,37 @@ router.post("/join-ride", authenticateToken, async (req, res) => {
     const { ride_id } = req.body;
     const passenger_id = req.user.id;
 
-    // Check if seats are available
-    const ride = await pool.query("SELECT seats FROM rides WHERE id=$1", [ride_id]);
+    const ride = await pool.query("SELECT seats, status FROM rides WHERE id=$1", [ride_id]);
     if (ride.rows.length === 0) return res.status(404).json({ message: "Ride not found" });
     if (ride.rows[0].seats <= 0) return res.status(400).json({ message: "No seats available" });
+    if (ride.rows[0].status === "STARTED") return res.status(400).json({ message: "Ride already started" });
 
-    await pool.query(
-      "INSERT INTO ride_members (ride_id,passenger_id) VALUES ($1,$2)",
-      [ride_id, passenger_id]
-    );
+    await pool.query("INSERT INTO ride_members (ride_id,passenger_id) VALUES ($1,$2)", [ride_id, passenger_id]);
     await pool.query("UPDATE rides SET seats = seats - 1 WHERE id=$1", [ride_id]);
 
     res.json({ message: "Joined ride" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to join ride" });
+  }
+});
+
+// ------------------- UNJOIN RIDE -------------------
+router.post("/unjoin-ride", authenticateToken, async (req, res) => {
+  try {
+    const { ride_id } = req.body;
+    const passenger_id = req.user.id;
+
+    const rideMember = await pool.query("SELECT * FROM ride_members WHERE ride_id=$1 AND passenger_id=$2", [ride_id, passenger_id]);
+    if (rideMember.rows.length === 0) return res.status(404).json({ message: "You are not part of this ride" });
+
+    await pool.query("DELETE FROM ride_members WHERE ride_id=$1 AND passenger_id=$2", [ride_id, passenger_id]);
+    await pool.query("UPDATE rides SET seats = seats + 1 WHERE id=$1", [ride_id]);
+
+    res.json({ message: "Unjoined ride" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to unjoin ride" });
   }
 });
 
