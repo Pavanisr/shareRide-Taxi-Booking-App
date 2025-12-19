@@ -1,32 +1,22 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  StatusBar,
-  Animated,
-  Dimensions,
-} from "react-native";
+import { View, Text, StyleSheet, Image, StatusBar, Animated, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 
-const { width } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
+
+const offers = [
+  "🎉 Get 20% off on your first ride",
+  "🚕 Ride together & save fuel costs",
+  "💸 Driver bonus for peak hours",
+  "🎁 Refer friends & earn coupons",
+];
 
 export default function Index() {
-  const router = useRouter();
-
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
-
-  const offers = [
-    "🎉 20% OFF First Ride",
-    "🚕 Share rides & save money",
-    "💰 Driver peak bonuses",
-    "🎁 Refer friends & earn",
-    "⚡ Fast & safe rides",
-  ];
+  const offerAnim = useRef(new Animated.Value(height)).current;
+  const router = useRouter();
 
   useEffect(() => {
     // Splash animation
@@ -43,32 +33,33 @@ export default function Index() {
       }),
     ]).start();
 
-    startScroll();
-
-    setTimeout(() => {
-      router.replace("/start");
-    }, 5000);
-  }, []);
-
-  const startScroll = () => {
-    translateX.setValue(0);
+    // Offers animation (vertical loop)
     Animated.loop(
-      Animated.timing(translateX, {
-        toValue: -width,
-        duration: 10000,
+      Animated.timing(offerAnim, {
+        toValue: -height,
+        duration: 12000,
         useNativeDriver: true,
       })
     ).start();
-  };
+
+    // Auto navigate after 5 seconds
+    const timer = setTimeout(() => {
+      router.replace("/start");
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <LinearGradient
       colors={["#08edf5ff", "#76b1f5ff", "#055c66ff"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
       <StatusBar barStyle="light-content" />
 
-      {/* Logo */}
+      {/* Logo + App Name */}
       <Animated.View
         style={{
           alignItems: "center",
@@ -79,23 +70,29 @@ export default function Index() {
         <Image
           source={require("../assets/images/logov.png")}
           style={styles.logo}
+          resizeMode="contain"
         />
         <Text style={styles.title}>ShareRide</Text>
         <Text style={styles.subtitle}>Ride together. Save together.</Text>
       </Animated.View>
 
-      {/* 🔥 Offers Section */}
-      <View style={styles.offersContainer}>
+      {/* Offers Section */}
+      <View style={styles.offerContainer}>
         <Animated.View
-          style={[
-            styles.offersRow,
-            { transform: [{ translateX }] },
-          ]}
+          style={{
+            transform: [{ translateY: offerAnim }],
+          }}
         >
-          {[...offers, ...offers].map((offer, index) => (
-            <View key={index} style={styles.offerCard}>
-              <Text style={styles.offerText}>{offer}</Text>
-            </View>
+          {offers.map((offer, index) => (
+            <Text key={index} style={styles.offerText}>
+              {offer}
+            </Text>
+          ))}
+          {/* repeat for smooth loop */}
+          {offers.map((offer, index) => (
+            <Text key={`repeat-${index}`} style={styles.offerText}>
+              {offer}
+            </Text>
           ))}
         </Animated.View>
       </View>
@@ -109,49 +106,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   logo: {
     width: 140,
     height: 140,
     marginBottom: 20,
   },
-
   title: {
     fontSize: 36,
     fontWeight: "bold",
     color: "#FFFFFF",
+    letterSpacing: 1,
   },
-
   subtitle: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 14,
     color: "#E6D9F2",
   },
-
-  /* OFFERS */
-  offersContainer: {
+  offerContainer: {
     position: "absolute",
-    bottom: 60,
-    width: "100%",
+    bottom: 40,
+    height: 60,
     overflow: "hidden",
   },
-
-  offersRow: {
-    flexDirection: "row",
-  },
-
-  offerCard: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    marginHorizontal: 10,
-    elevation: 6,
-  },
-
   offerText: {
-    color: "#033c50ff",
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: "600",
+    textAlign: "center",
+    marginVertical: 10,
+    opacity: 0.9,
   },
 });
