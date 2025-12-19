@@ -1,3 +1,4 @@
+// StartScreen.tsx
 import React, { useContext, useRef, useEffect } from "react";
 import {
   View,
@@ -12,12 +13,13 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { AuthContext } from "./context/AuthContext";
+import { AuthContext } from "./context/AuthContext"; // make sure path is correct
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "./app";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 const { width } = Dimensions.get("window");
+const SERVER_URL = "http://192.168.1.9:5000";
 
 export default function StartScreen() {
   const scrollRef = useRef<ScrollView>(null);
@@ -72,7 +74,7 @@ export default function StartScreen() {
         <TouchableOpacity style={styles.profileIcon} onPress={handleProfilePress}>
           {user?.profileImage ? (
             <Image
-              source={{ uri: `http://YOUR_SERVER/uploads/${user.profileImage}` }}
+              source={{ uri: `${SERVER_URL}/uploads/${user.profileImage}` }}
               style={styles.profileImage}
             />
           ) : (
@@ -121,20 +123,59 @@ export default function StartScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F6FA" },
-  header: { height: 260, borderBottomLeftRadius: 35, borderBottomRightRadius: 35, alignItems: "center", justifyContent: "center", paddingTop: 40 },
-  profileIcon: { position: "absolute", top: 55, right: 20, padding: 8, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.25)" },
+  header: {
+    height: 260,
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 40,
+  },
+  profileIcon: {
+    position: "absolute",
+    top: 55,
+    right: 20,
+    padding: 8,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
   profileImage: { width: 32, height: 32, borderRadius: 16 },
   appName: { fontSize: 38, fontWeight: "800", color: "#fff" },
   tagline: { marginTop: 8, fontSize: 15, color: "#EAF6FF" },
   cardContainer: { marginTop: -70, paddingHorizontal: 20 },
-  card: { backgroundColor: "#fff", borderRadius: 22, paddingVertical: 30, paddingHorizontal: 26, marginBottom: 22, shadowColor: "#000", shadowOpacity: 0.15, shadowOffset: { width: 0, height: 8 }, shadowRadius: 12, elevation: 10 },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    paddingVertical: 30,
+    paddingHorizontal: 26,
+    marginBottom: 22,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 12,
+    elevation: 10,
+  },
   passengerCard: { borderLeftWidth: 6, borderLeftColor: "#08edf5ff" },
   driverCard: { borderLeftWidth: 6, borderLeftColor: "#f5a608ff" },
   cardTitle: { fontSize: 24, fontWeight: "800", color: "#033c50ff" },
   cardSubtitle: { marginTop: 10, fontSize: 15, color: "#6B7280", lineHeight: 22 },
-  createRideButton: { marginTop: 10, backgroundColor: "#08edf5ff", paddingVertical: 18, borderRadius: 16, alignItems: "center", elevation: 8 },
+  createRideButton: {
+    marginTop: 10,
+    backgroundColor: "#08edf5ff",
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: "center",
+    elevation: 8,
+  },
   createRideText: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: 0.5 },
   offersContainer: { position: "absolute", bottom: 18, width: "100%" },
-  offerCard: { backgroundColor: "#fff", paddingVertical: 12, paddingHorizontal: 20, borderRadius: 16, marginHorizontal: 10, elevation: 6 },
+  offerCard: {
+    backgroundColor: "#fff",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 10,
+    elevation: 6,
+  },
   offerText: { color: "#033c50ff", fontSize: 14, fontWeight: "600" },
 });
