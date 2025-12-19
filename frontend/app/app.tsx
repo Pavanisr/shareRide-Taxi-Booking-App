@@ -3,10 +3,10 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { AuthProvider } from "./context/AuthContext";
 
-import StartScreen from "./screens/StartScreen";
-import LoginScreen from "./screens/LoginScreen";
-import SignupScreen from "./screens/SignupScreen";
-import ProfileScreen from "./screens/ProfileScreen";
+import StartScreen from "./start";
+import LoginScreen from "./Login";
+import SignupScreen from "./Signup";
+import ProfileScreen from "./Profile";
 
 export type RootStackParamList = {
   Start: undefined;
