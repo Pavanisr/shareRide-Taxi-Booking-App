@@ -1,45 +1,48 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import axios from "axios";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "./App"; // define your navigation stack types in App.tsx
+import { RootStackParamList } from "./app";
 
-type SignupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Signup">;
-
-type Props = {
-  navigation: SignupScreenNavigationProp;
-};
-
-export default function SignupScreen({ navigation }: Props) {
+export default function SignupScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handleSignup = () => {
-    if (name && email && password) {
-      Alert.alert("Success", "Account created");
-      navigation.navigate("Login");
-    } else {
-      Alert.alert("Error", "Fill all fields");
+  const handleSignup = async () => {
+    try {
+      await axios.post("http://YOUR_SERVER/passenger/register", { name, email, password });
+      Alert.alert("Success", "Account created! Please login.");
+      navigation.replace("Login");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Signup Failed", "Try again");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Sign Up</Text>
+      <Text style={styles.title}>Passenger Sign Up</Text>
       <TextInput placeholder="Name" value={name} onChangeText={setName} style={styles.input} />
       <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
       <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={styles.input} />
       <TouchableOpacity style={styles.button} onPress={handleSignup}>
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+        <Text style={styles.link}>Already have an account? Sign In</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: "center" },
-  title: { fontSize: 28, fontWeight: "800", marginBottom: 20 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, marginVertical: 10 },
-  button: { backgroundColor: "#08edf5ff", padding: 15, borderRadius: 10, alignItems: "center", marginTop: 10 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#F4F6FA" },
+  title: { fontSize: 28, fontWeight: "700", marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 12, marginBottom: 15, backgroundColor: "#fff" },
+  button: { backgroundColor: "#08edf5ff", padding: 15, borderRadius: 12, alignItems: "center", marginBottom: 10 },
+  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  link: { color: "#055c66ff", fontWeight: "600", textAlign: "center", marginTop: 5 },
 });
