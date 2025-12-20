@@ -17,7 +17,7 @@ import { AuthContext } from "../src/api/context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "./app";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { BASE_URL } from "../src/api/api"; // ✅ USE API FILE ONLY
+import { BASE_URL } from "../src/api/api";
 
 const { width } = Dimensions.get("window");
 
@@ -71,11 +71,15 @@ export default function StartScreen() {
         style={styles.header}
       >
         <TouchableOpacity style={styles.profileIcon} onPress={handleProfilePress}>
-          {user?.profileImage ? (
-            <Image
-              source={{ uri: `${BASE_URL}/uploads/${user.profileImage}` }}
-              style={styles.profileImage}
-            />
+          {user ? (
+            user.profileImage ? (
+              <Image
+                source={{ uri: `${BASE_URL}/uploads/${user.profileImage}` }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <Ionicons name="person-circle-outline" size={32} color="#fff" />
+            )
           ) : (
             <Ionicons name="log-in-outline" size={28} color="#fff" />
           )}
@@ -84,6 +88,35 @@ export default function StartScreen() {
         <Text style={styles.appName}>ShareRide</Text>
         <Text style={styles.tagline}>Ride together. Save together.</Text>
       </LinearGradient>
+
+      {/* ACTION BUTTONS BASED ON USER ROLE */}
+      {user && user.role && (
+        <View style={styles.buttonsContainer}>
+          {user.role === "passenger" && (
+            <>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: "#08edf5ff" }]}
+              >
+                <Text style={styles.buttonText}>Create Ride</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: "#f5a608ff" }]}
+              >
+                <Text style={styles.buttonText}>Search Rides</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {user.role === "driver" && (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: "#f5a608ff" }]}
+            >
+              <Text style={styles.buttonText}>Manage Rides</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* CARDS */}
       <View style={styles.cardContainer}>
@@ -100,12 +133,6 @@ export default function StartScreen() {
             Accept rides · Earn daily income
           </Text>
         </TouchableOpacity>
-
-        {user && (
-          <TouchableOpacity style={styles.createRideButton}>
-            <Text style={styles.createRideText}>Search Rides</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* OFFERS TICKER */}
@@ -153,7 +180,22 @@ const styles = StyleSheet.create({
   appName: { fontSize: 38, fontWeight: "800", color: "#fff" },
   tagline: { marginTop: 8, fontSize: 15, color: "#EAF6FF" },
 
-  cardContainer: { marginTop: -70, paddingHorizontal: 20 },
+  buttonsContainer: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+
+  actionButton: {
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  buttonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+
+  cardContainer: { marginTop: 10, paddingHorizontal: 20 },
 
   card: {
     backgroundColor: "#fff",
@@ -169,16 +211,6 @@ const styles = StyleSheet.create({
 
   cardTitle: { fontSize: 24, fontWeight: "800", color: "#033c50ff" },
   cardSubtitle: { marginTop: 10, fontSize: 15, color: "#6B7280" },
-
-  createRideButton: {
-    marginTop: 10,
-    backgroundColor: "#08edf5ff",
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-
-  createRideText: { color: "#fff", fontSize: 17, fontWeight: "800" },
 
   offersContainer: {
     position: "absolute",
