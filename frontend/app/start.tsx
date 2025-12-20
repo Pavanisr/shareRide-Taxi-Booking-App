@@ -13,11 +13,11 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { AuthContext } from "./context/AuthContext";
+import { AuthContext } from "../src/api/context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "./app";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { BASE_URL } from "./api"; // ✅ USE API FILE ONLY
+import { BASE_URL } from "../src/api/api"; // ✅ USE API FILE ONLY
 
 const { width } = Dimensions.get("window");
 
