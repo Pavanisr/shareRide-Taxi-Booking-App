@@ -1,80 +1,66 @@
-// LoginScreen.tsx
-import React, { useState, useContext } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { AuthContext } from "./context/AuthContext"; // make sure path is correct
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "./app"; // your app.tsx types
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { passengerLogin } from "./api"; // import your api.ts helper
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "./app";
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const { login } = useContext(AuthContext);
+export default function LoginSelectScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Validation Error", "Please enter both email and password");
-      return;
-    }
-
-    try {
-      const data = await passengerLogin(email, password); // call api.ts function
-      login(data.user, data.token); // save user & token in AuthContext
-      navigation.replace("Start");
-    } catch (err: any) {
-      console.error(err);
-      Alert.alert("Login Failed", err.message || "Invalid credentials");
-    }
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Passenger Login</Text>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+    <LinearGradient
+      colors={["#08edf5ff", "#76b1f5ff", "#055c66ff"]}
+      style={styles.container}
+    >
+      <Text style={styles.title}>Login as</Text>
+
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate("PassengerLogin")}
+      >
+        <Ionicons name="person-outline" size={32} color="#08edf5ff" />
+        <Text style={styles.cardText}>Passenger</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-        <Text style={styles.link}>Don't have an account? Sign Up</Text>
+
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate("DriverLogin")}
+      >
+        <Ionicons name="car-outline" size={32} color="#f5a608ff" />
+        <Text style={styles.cardText}>Driver</Text>
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#F4F6FA" },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 20, color: "#333" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 15,
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 40,
+  },
+  card: {
     backgroundColor: "#fff",
-  },
-  button: {
-    backgroundColor: "#08edf5ff",
-    padding: 15,
-    borderRadius: 12,
+    borderRadius: 20,
+    padding: 22,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 20,
+    elevation: 8,
   },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  link: { color: "#055c66ff", fontWeight: "600", textAlign: "center", marginTop: 5 },
+  cardText: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginLeft: 16,
+    color: "#033c50ff",
+  },
 });
