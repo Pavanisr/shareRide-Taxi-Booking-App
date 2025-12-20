@@ -15,4 +15,8 @@ app.use("/api/passenger", passengerRoutes);
 app.use("/api/driver", driverRoutes);
 
 const PORT = process.env.PORT || 5000;
+app.get("/", (req, res) => {
+  res.send("ShareRide API running 🚕");
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
