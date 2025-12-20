@@ -1,5 +1,5 @@
 // api.ts
-const BASE_URL = "http://192.168.1.9:5000"; // your backend
+export const BASE_URL = "http://192.168.1.9:5000"; // your backend
 
 // ----------------- Helper -----------------
 const handleResponse = async (res: Response) => {
@@ -7,6 +7,9 @@ const handleResponse = async (res: Response) => {
   if (!res.ok) throw new Error(data.message || "Something went wrong");
   return data;
 };
+
+// (rest of your API functions stay EXACTLY the same)
+
 
 // ----------------- Passenger APIs -----------------
 export const passengerSignup = async (formData: FormData) => {
