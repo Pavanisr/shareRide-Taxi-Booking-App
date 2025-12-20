@@ -13,13 +13,13 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { AuthContext } from "./context/AuthContext"; // make sure path is correct
+import { AuthContext } from "./context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "./app";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { BASE_URL } from "./api"; // ✅ USE API FILE ONLY
 
 const { width } = Dimensions.get("window");
-const SERVER_URL = "http://192.168.1.9:5000";
 
 export default function StartScreen() {
   const scrollRef = useRef<ScrollView>(null);
@@ -41,6 +41,7 @@ export default function StartScreen() {
       scrollRef.current?.scrollTo({ x: position, animated: false });
       if (position >= width * offers.length) position = 0;
     }, 18);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -54,7 +55,7 @@ export default function StartScreen() {
     } else {
       Alert.alert("Profile", undefined, [
         { text: "Profile", onPress: () => navigation.navigate("Profile") },
-        { text: "Logout", onPress: () => logout() },
+        { text: "Logout", onPress: logout },
         { text: "Cancel", style: "cancel" },
       ]);
     }
@@ -67,20 +68,19 @@ export default function StartScreen() {
       {/* HEADER */}
       <LinearGradient
         colors={["#08edf5ff", "#76b1f5ff", "#055c66ff"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
         style={styles.header}
       >
         <TouchableOpacity style={styles.profileIcon} onPress={handleProfilePress}>
           {user?.profileImage ? (
             <Image
-              source={{ uri: `${SERVER_URL}/uploads/${user.profileImage}` }}
+              source={{ uri: `${BASE_URL}/uploads/${user.profileImage}` }}
               style={styles.profileImage}
             />
           ) : (
             <Ionicons name="log-in-outline" size={28} color="#fff" />
           )}
         </TouchableOpacity>
+
         <Text style={styles.appName}>ShareRide</Text>
         <Text style={styles.tagline}>Ride together. Save together.</Text>
       </LinearGradient>
@@ -89,27 +89,33 @@ export default function StartScreen() {
       <View style={styles.cardContainer}>
         <TouchableOpacity style={[styles.card, styles.passengerCard]}>
           <Text style={styles.cardTitle}>Passenger</Text>
-          <Text style={styles.cardSubtitle}>Find rides · Join rides · Save money</Text>
+          <Text style={styles.cardSubtitle}>
+            Find rides · Join rides · Save money
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.card, styles.driverCard]}>
           <Text style={styles.cardTitle}>Driver</Text>
-          <Text style={styles.cardSubtitle}>Accept rides · Earn daily income</Text>
+          <Text style={styles.cardSubtitle}>
+            Accept rides · Earn daily income
+          </Text>
         </TouchableOpacity>
 
         {user && (
-          <TouchableOpacity
-            style={styles.createRideButton}
-            onPress={() => Alert.alert("Search", "Search rides in your location")}
-          >
+          <TouchableOpacity style={styles.createRideButton}>
             <Text style={styles.createRideText}>Search Rides</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* OFFERS */}
+      {/* OFFERS TICKER */}
       <View style={styles.offersContainer}>
-        <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} scrollEnabled={false}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+        >
           {[...offers, ...offers].map((offer, index) => (
             <View key={index} style={styles.offerCard}>
               <Text style={styles.offerText}>{offer}</Text>
@@ -123,6 +129,7 @@ export default function StartScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F6FA" },
+
   header: {
     height: 260,
     borderBottomLeftRadius: 35,
@@ -131,6 +138,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 40,
   },
+
   profileIcon: {
     position: "absolute",
     top: 55,
@@ -139,36 +147,45 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.25)",
   },
+
   profileImage: { width: 32, height: 32, borderRadius: 16 },
+
   appName: { fontSize: 38, fontWeight: "800", color: "#fff" },
   tagline: { marginTop: 8, fontSize: 15, color: "#EAF6FF" },
+
   cardContainer: { marginTop: -70, paddingHorizontal: 20 },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 22,
     paddingVertical: 30,
     paddingHorizontal: 26,
     marginBottom: 22,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 12,
     elevation: 10,
   },
+
   passengerCard: { borderLeftWidth: 6, borderLeftColor: "#08edf5ff" },
   driverCard: { borderLeftWidth: 6, borderLeftColor: "#f5a608ff" },
+
   cardTitle: { fontSize: 24, fontWeight: "800", color: "#033c50ff" },
-  cardSubtitle: { marginTop: 10, fontSize: 15, color: "#6B7280", lineHeight: 22 },
+  cardSubtitle: { marginTop: 10, fontSize: 15, color: "#6B7280" },
+
   createRideButton: {
     marginTop: 10,
     backgroundColor: "#08edf5ff",
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: "center",
-    elevation: 8,
   },
-  createRideText: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: 0.5 },
-  offersContainer: { position: "absolute", bottom: 18, width: "100%" },
+
+  createRideText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+
+  offersContainer: {
+    position: "absolute",
+    bottom: 18,
+    width: "100%",
+  },
+
   offerCard: {
     backgroundColor: "#fff",
     paddingVertical: 12,
@@ -177,5 +194,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     elevation: 6,
   },
-  offerText: { color: "#033c50ff", fontSize: 14, fontWeight: "600" },
+
+  offerText: {
+    color: "#033c50ff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });
