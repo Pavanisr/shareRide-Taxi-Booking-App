@@ -11,7 +11,7 @@ import SignupScreen from "./Signup";
 import ProfileScreen from "./Profile";
 
 export type RootStackParamList = {
-  Start: undefined;
+  start: undefined;
   Login: undefined;
   PassengerLogin: undefined;
   DriverLogin: undefined;
@@ -25,8 +25,8 @@ export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Start" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Start" component={StartScreen} />
+        <Stack.Navigator initialRouteName="start" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="start" component={StartScreen} />
           
           <Stack.Screen name="Login" component={LoginSelectScreen} />
           <Stack.Screen name="PassengerLogin" component={PassengerLoginScreen} />
