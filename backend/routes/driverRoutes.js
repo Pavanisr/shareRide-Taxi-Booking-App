@@ -89,6 +89,7 @@ router.post("/login", async (req, res) => {
         vehicleImage: user.rows[0].vehicle_image,
         vehicleType: user.rows[0].vehicle_type,
         vehicleNumber: user.rows[0].vehicle_number,
+        role: user.rows[0].role,
       },
     });
   } catch (err) {
