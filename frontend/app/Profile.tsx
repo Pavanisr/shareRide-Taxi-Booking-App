@@ -1,8 +1,8 @@
 // ProfileScreen.tsx
 import React, { useContext, useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
-import { AuthContext } from "./context/AuthContext";
-import { passengerEditProfile, passengerDeleteProfile } from "./api";
+import { AuthContext } from "../src/api/context/AuthContext";
+import { passengerEditProfile, passengerDeleteProfile } from "../src/api/api";
 
 export default function ProfileScreen() {
   const { user, token, logout} = useContext(AuthContext);
